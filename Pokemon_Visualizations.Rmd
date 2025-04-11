@@ -1,0 +1,231 @@
+---
+title: "Pokemon Visualizations"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(fmsb)
+library(tidyr)
+```
+
+```{r}
+pokemon <- read.csv("all_pokemon_data.csv")
+head(pokemon)
+```
+```{r}
+colnames(pokemon) <- c("Name", "National Dex ID", "Primary Typing", "Secondary Typing", "Secondary Typing Flag", "Generation", "Legendary Status", "Form", "Alt Form Flag", "Evolution Stage", "Number of Evolution", "Color ID", "Catch Rate", "Height in dm", "Weight in hg", "Height in in", "Weight in lbs", "Base Stat Total", "Health", "Attack", "Defense", "Special Attack", "Special Defense", "Speed")
+```
+
+```{r}
+colnames(pokemon)
+```
+
+```{r}
+summary(pokemon)
+```
+```{r}
+glimpse(pokemon)
+```
+```{r}
+pokemon[pokemon == ""] <- "None"
+```
+
+```{r}
+pokemon_defense <- pokemon %>%
+  mutate(`Primary Typing` = reorder(`Primary Typing`, Defense, median, na.rm = TRUE))
+
+ggplot(pokemon_defense, aes(x = `Primary Typing`, y = Defense, fill = `Primary Typing`)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Defense by Primary Typing", x = "Primary Type", y = "Defense")
+```
+```{r}
+pokemon_attack <- pokemon %>%
+  mutate(`Primary Typing` = reorder(`Primary Typing`, Attack, median, na.rm = TRUE))
+
+ggplot(pokemon_attack, aes(x = `Primary Typing`, y = Attack, fill = `Primary Typing`)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Attack by Primary Typing", x = "Primary Type", y = "Attack")
+```
+```{r}
+pokemon_base <- pokemon %>%
+  mutate(`Primary Typing` = reorder(`Primary Typing`, `Base Stat Total`, median, na.rm = TRUE))
+
+ggplot(pokemon_base, aes(x = `Primary Typing`, y = `Base Stat Total`, fill = `Primary Typing`)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Distribution of Total Base Stat by Primary Typing", x = "Primary Type", y = "Total Base Stat")
+```
+
+```{r}
+type_stats <- pokemon %>%
+  filter(`Primary Typing` %in% c("bug", "dragon")) %>%
+  group_by(`Primary Typing`) %>%
+  summarise(
+    Health = mean(Health, na.rm = TRUE),
+    Attack = mean(Attack, na.rm = TRUE),
+    Defense = mean(Defense, na.rm = TRUE),
+    `Special Attack` = mean(`Special Attack`, na.rm = TRUE),
+    `Special Defense` = mean(`Special Defense`, na.rm = TRUE),
+    Speed = mean(Speed, na.rm = TRUE)
+  )
+
+radar <- rbind(
+  max_vals = c(150, 150, 150, 150, 150, 150),
+  min_vals = c(0, 0, 0, 0, 0, 0),
+  type_stats %>% filter(`Primary Typing` == "bug") %>% select(-`Primary Typing`),
+  type_stats %>% filter(`Primary Typing` == "dragon") %>% select(-`Primary Typing`)
+)
+
+radarchart(radar,
+           axistype = 1,
+           pcol = c("forestgreen", "tomato"),
+           pfcol = c(scales::alpha("forestgreen", 0.4), scales::alpha("tomato", 0.4)),
+           plwd = 2,
+           cglcol = "grey",
+           cglty = 1,
+           axislabcol = "black",
+           caxislabels = seq(0, 250, 50),
+           vlcex = 0.8,
+           title = paste("Base Stat Comparison:", "Bug Type vs Dragon Type"))
+legend("topright", legend = c("Bug", "Dragon"), col = c("forestgreen", "tomato"), lty = 1, lwd = 2)
+```
+
+```{r}
+ggplot(pokemon, aes(x = Attack, y = Defense)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Attack vs Defense", x = "Attack", y = "Defense")
+```
+
+```{r}
+ggplot(pokemon, aes(x = Generation, fill = `Legendary Status`)) +
+  geom_bar(position = "dodge") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Number of Legendary vs Non-Legendary Pokémon per Generation", 
+       x = "Generation", y = "Count")
+```
+```{r}
+ggplot(pokemon, aes(x = `Legendary Status`, y = `Base Stat Total`, fill = `Legendary Status`)) +
+  geom_boxplot() +
+  labs(title = "Base Stat Total: Legendary vs Non-Legendary")
+```
+```{r}
+legendary_stats <- pokemon %>%
+  filter(`Legendary Status` %in% c("True", "False")) %>%
+  group_by(`Legendary Status`) %>%
+  summarise(
+    Health = mean(Health, na.rm = TRUE),
+    Attack = mean(Attack, na.rm = TRUE),
+    Defense = mean(Defense, na.rm = TRUE),
+    `Special Attack` = mean(`Special Attack`, na.rm = TRUE),
+    `Special Defense` = mean(`Special Defense`, na.rm = TRUE),
+    Speed = mean(Speed, na.rm = TRUE)
+  )
+
+radar <- rbind(
+  max_vals = c(150, 150, 150, 150, 150, 150),
+  min_vals = c(0, 0, 0, 0, 0, 0),
+  legendary_stats %>% filter(`Legendary Status` == "False") %>% select(-`Legendary Status`),
+  legendary_stats %>% filter(`Legendary Status` == "True") %>% select(-`Legendary Status`)
+)
+
+radarchart(radar,
+           axistype = 1,
+           pcol = c("forestgreen", "tomato"),
+           pfcol = c(scales::alpha("forestgreen", 0.4), scales::alpha("tomato", 0.4)),
+           plwd = 2,
+           cglcol = "grey",
+           cglty = 1,
+           axislabcol = "black",
+           caxislabels = seq(0, 250, 50),
+           vlcex = 0.8,
+           title = paste("Base Stat Comparison:", "Legendary vs Non-Legendary"))
+legend("topright", legend = c("Non-Legendary", "Legendary"), col = c("forestgreen", "tomato"), lty = 1, lwd = 2)
+```
+```{r}
+ggplot(pokemon, aes(x = `Catch Rate`, y = `Base Stat Total`, color = `Legendary Status`)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Catch Rate vs Total Base Stat")
+```
+
+```{r}
+ggplot(pokemon, aes(x = `Evolution Stage`)) +
+  geom_bar(fill = "#7e9ccf") +
+  labs(title = "Distribution of Pokémon by Evolution Stage", x = "Evolution Stage", y = "Count")
+```
+```{r}
+ggplot(pokemon, aes(x = `Weight in lbs`, y = Attack)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Weight vs Attack", x = "Weight (lbs)", y = "Attack")
+```
+
+```{r}
+ggplot(pokemon, aes(x = `Color ID`, y = Attack, fill = `Color ID`)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("black", "#5e84c4", "#9e8067", "gray", "#7dbf71", "#e3b3c5", "#b998d4", "#c45252", "white", "#ede193")) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(title = "Attack vs Color", x = "Color", y = "Attack")
+```
+```{r}
+ggplot(pokemon, aes(x = `Color ID`, y = Speed, fill = `Color ID`)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("black", "#5e84c4", "#9e8067", "gray", "#7dbf71", "#e3b3c5", "#b998d4", "#c45252", "white", "#ede193")) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(title = "Speed vs Color", x = "Color", y = "Speed")
+```
+
+```{r}
+ggplot(pokemon, aes(x = `Height in in`, y = `Weight in lbs`)) +
+  geom_hex() +
+  labs(title = "Density of Pokémon by Size (Height vs. Weight)")
+```
+```{r}
+ggplot(pokemon, aes(x = factor(Generation), y = `Base Stat Total`, fill = factor(Generation))) +
+  geom_violin(trim = FALSE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Base Stat Distribution by Generation", x = "Generation", y = "Total Base Stat")
+```
+```{r}
+generation_stats <- pokemon %>%
+  group_by(Generation) %>%
+  summarise(
+    Health = mean(Health, na.rm = TRUE),
+    Attack = mean(Attack, na.rm = TRUE),
+    Defense = mean(Defense, na.rm = TRUE),
+    `Special Attack` = mean(`Special Attack`, na.rm = TRUE),
+    `Special Defense` = mean(`Special Defense`, na.rm = TRUE),
+    Speed = mean(Speed, na.rm = TRUE)
+  ) %>%
+  pivot_longer(cols = -Generation, names_to = "Stat", values_to = "Average")
+
+ggplot(generation_stats, aes(x = Generation, y = Average, color = Stat, group = Stat)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  theme_minimal() +
+  labs(title = "Stats by Generation",
+       x = "Generation",
+       y = "Average Stat") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 14, hjust = 0.5))
+```
+
+```{r}
+numeric_stats <- pokemon[, c("Health", "Attack", "Defense", "Speed", "Height in in", "Weight in lbs")]
+cor_matrix <- cor(numeric_stats, use = "complete.obs")
+
+corrplot(cor_matrix, method = "color", addCoef.col = "#41434d", tl.col = "black", number.cex = 0.7)
+```
+
+
+
