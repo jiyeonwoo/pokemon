@@ -1,6 +1,8 @@
 # pokemon
 
-Visualizing pokemon stats with R for fun. Data is from [Kaggle](https://www.kaggle.com/datasets/sarahtaha/1025-pokemon).
+Visualizing pokemon stats with R for fun. More analysis to come.
+
+Data is from [Kaggle](https://www.kaggle.com/datasets/sarahtaha/1025-pokemon).
 
 ![image](https://github.com/user-attachments/assets/aa901ad9-bee7-42ae-b48f-ca33ff67fff8)
 
